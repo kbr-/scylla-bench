@@ -108,3 +108,5 @@ for chunk in COMPR_CHUNKS:
         print("Benchmarking compression:", cname)
         res_chunk.append((cname, bench_compr(fname, cdict)))
     results.append((chunk, res_chunk))
+
+print("results:\n", results)

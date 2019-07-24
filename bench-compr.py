@@ -6,6 +6,7 @@ import shutil
 import os
 import time
 import subprocess
+import json
 
 def read_chunks(f, sz):
     while True:
@@ -16,7 +17,7 @@ def read_chunks(f, sz):
 
 
 def du(path):
-    return subprocess.check_output(['du','-sh', path]).split()[0].decode('utf-8')
+    return subprocess.check_output(['du','-s', path]).split()[0].decode('utf-8')
 
 def mk_compr_dict(compr, level, chunk):
     return "{{{}}}".format(", ".join(
@@ -95,10 +96,16 @@ if len(sys.argv) < 2:
     print("Requires data file name")
     sys.exit(0)
 
-fname = sys.argv[1]
-if not os.path.exists(fname):
-    print("File does not exist:", fname)
+if len(sys.argv) < 3:
+    print("Requires data file name and output file name")
     sys.exit(0)
+
+infname = sys.argv[1]
+if not os.path.exists(infname):
+    print("File does not exist:", infname)
+    sys.exit(0)
+
+outfname = sys.argv[2]
 
 results = []
 for chunk in COMPR_CHUNKS:
@@ -106,7 +113,10 @@ for chunk in COMPR_CHUNKS:
     res_chunk = []
     for cname, cdict in compressions(chunk):
         print("Benchmarking compression:", cname)
-        res_chunk.append((cname, bench_compr(fname, cdict)))
-    results.append((chunk, res_chunk))
+        t, s = bench_compr(infname, cdict)
+        res_chunk.append({'name': cname, 'flush_time': t, 'space': s})
+    results.append({'chunk_len': chunk, 'results': res_chunk})
 
 print("results:\n", results)
+with open(outfname, 'w') as outf:
+    json.dump(results, outf)

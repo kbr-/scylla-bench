@@ -48,8 +48,8 @@ CHUNK_SIZE = 1024
 
 KS_DIR = os.path.join(SCYLLA_HOME, 'tmp/test_ks')
 
-# Takes a compression dict, returns (time, space)
-def bench_compr(cdict):
+# Takes a file name, compression dict, returns (time, space)
+def bench_compr(fname, cdict):
     with Cluster() as cluster:
         session = cluster.connect('test_ks')
 
@@ -62,7 +62,7 @@ def bench_compr(cdict):
         num_partitions = 10
         ixs = [0]*num_partitions
 
-        with open('actors.list', 'r', encoding='latin1') as f:
+        with open(fname, 'r', encoding='latin1') as f:
             much = 0
             currp = 0
             for c in read_chunks(f, CHUNK_SIZE):
@@ -91,13 +91,20 @@ def bench_compr(cdict):
         print("Done.\nTime: {:.3f} ms\nSpace: {}".format(duration, space))
         return (duration, space)
 
+if len(sys.argv) < 2:
+    print("Requires data file name")
+    sys.exit(0)
+
+fname = sys.argv[1]
+if not os.path.exists(fname):
+    print("File does not exist:", fname)
+    sys.exit(0)
+
 results = []
 for chunk in COMPR_CHUNKS:
     print("Compression chunk length in kb:", chunk)
     res_chunk = []
     for cname, cdict in compressions(chunk):
         print("Benchmarking compression:", cname)
-        res_chunk.append((cname, bench_compr(cdict)))
+        res_chunk.append((cname, bench_compr(fname, cdict)))
     results.append((chunk, res_chunk))
-
-print("results:\n", results)

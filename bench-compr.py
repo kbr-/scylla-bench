@@ -34,7 +34,7 @@ ZSTD_LEVELS = list(range(1, 23, 4))
 COMPR_CHUNKS = [4, 16, 64]
 
 # [(short name, long name, level)]
-COMPRESSIONS = ([('No compression', '', None)]
+COMPRESSIONS = ([('None', '', None)]
     + [(c[0], NAMESPACE_PREFIX + c[1], None) for c in [LZ4, SNAPPY, DEFLATE]]
     + [('{} {}'.format(ZSTD[0], l), NAMESPACE_PREFIX + ZSTD[1], l) for l in ZSTD_LEVELS]
 )
@@ -44,7 +44,7 @@ def compressions(chunk):
 
 SCYLLA_HOME = '/home/kbraun/dev/scylla/'
 
-HOW_MUCH = 30 * 1024 * 1024
+HOW_MUCH = 100 * 1024 * 1024
 CHUNK_SIZE = 1024
 
 KS_DIR = os.path.join(SCYLLA_HOME, 'tmp/test_ks')
@@ -90,7 +90,7 @@ def bench_compr(fname, cdict):
         duration = (t2 - t1) * 1000.
         space = du(KS_DIR)
         print("Done.\nTime: {:.3f} ms\nSpace: {}".format(duration, space))
-        return (duration, space)
+        return (duration, int(space))
 
 if len(sys.argv) < 2:
     print("Requires data file name")

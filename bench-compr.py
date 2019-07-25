@@ -33,7 +33,8 @@ SNAPPY = ('Snappy', 'SnappyCompressor')
 DEFLATE = ('Deflate', 'DeflateCompressor')
 ZSTD = ('Zstd', 'ZstdCompressor')
 ZSTD_LEVELS = [1, 3, 5, 7, 9]
-COMPR_CHUNKS = [4, 16, 64]
+COMPR_CHUNKS = [64]
+REPS = 10
 
 # [(short name, long name, level)]
 COMPRESSIONS = ([('None', '', None)]
@@ -119,6 +120,12 @@ def bench_compr(fname, cdict, logf):
         space = du(KS_DIR)
         return (duration, int(space), stalls)
 
+def mean(l):
+    return stats.mean(l) if l else 0
+
+def stdev(l):
+    return stats.stdev(l) if len(l) > 1 else 0
+
 results = []
 with open(logfname, 'r') as logf:
     logf.seek(0, 2)
@@ -127,14 +134,38 @@ with open(logfname, 'r') as logf:
         res_chunk = []
         for cname, cdict in compressions(chunk):
             print("Benchmarking compression:", cname)
-            t, space, stalls = bench_compr(infname, cdict, logf)
 
-            mean_stall = stats.mean(stalls) if stalls else 0
-            stdev_stall = stats.stdev(stalls) if len(stalls) > 1 else 0
+            times, spaces, all_stalls, stall_nums = [], [], [], []
+            for i in range(REPS):
+                print("rep", i)
+                t, space, stalls = bench_compr(infname, cdict, logf)
 
-            res_chunk.append({'name': cname, 'flush_time': t, 'space': space, 'stalls': len(stalls), 'mean_stall': mean_stall, 'stall_stdev': stdev_stall})
+                times.append(t)
+                spaces.append(space)
+                all_stalls.extend(stalls)
+                stall_nums.append(len(stalls))
 
-            print("Time: {:.3f} ms\nSpace: {}\nReactor stalls: {}, stall mean: {} ms, stall stdev: {} ms".format(t, space, len(stalls), mean_stall, stdev_stall))
+            time_mean = mean(times)
+            time_stdev = stdev(times)
+
+            space = mean(spaces)
+
+            stall_num_mean = mean(stall_nums)
+            stall_num_stdev = stdev(stall_nums)
+
+            stall_time_mean = mean(all_stalls)
+            stall_time_stdev = stdev(all_stalls)
+
+            res_chunk.append({'name': cname,
+                              'flush_time_mean': time_mean,
+                              'flush_time_stdev': time_stdev,
+                              'space': space,
+                              'stall_num_mean': stall_num_mean,
+                              'stall_num_stdev': stall_num_stdev,
+                              'stall_time_mean': stall_time_mean,
+                              'stall_time_stdev': stall_time_stdev})
+
+            print("Mean time: {:.3f} ms\nSpace: {}\Mean stall number: {}, mean stall time: {} ms".format(time_mean, space, stall_num_mean, stall_time_mean))
         results.append({'chunk_len': chunk, 'results': res_chunk})
 
 print("results:\n", results)
